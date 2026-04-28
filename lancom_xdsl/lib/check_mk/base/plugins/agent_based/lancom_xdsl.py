@@ -23,19 +23,20 @@ from typing import (
     Tuple,
 )
 
-from .agent_based_api.v1 import (
+from .agent_based_api.v2 import (
     check_levels,
-    register,
     render,
+    exists,
     startswith,
     Result,
     Service,
     SNMPTree,
     State,
-)
-from .agent_based_api.v1.type_defs import (
+    CheckParameters,
     CheckResult,
     DiscoveryResult,
+    CheckPlugin,
+    SNMPSection,
 )
 
 
@@ -213,7 +214,7 @@ def check_lancom_xdsl(item, params, section) -> CheckResult:
             label='Uptime',
         )
 
-register.snmp_section(
+SNMPSection(
     name="lancom_xdsl",
     parse_function=parse_lancom_xdsl,
     fetch=[
@@ -241,7 +242,7 @@ register.snmp_section(
     detect=startswith(".1.3.6.1.2.1.1.2.0", ".1.3.6.1.4.1.2356.11.8"),
 )
 
-register.check_plugin(
+CheckPlugin(
     name="lancom_xdsl",
     sections=["lancom_xdsl"],
     service_name="LANCOM xDSL %s",

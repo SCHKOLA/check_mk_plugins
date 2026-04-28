@@ -14,7 +14,21 @@
 # to the Free Software Foundation, Inc., 51 Franklin St,  Fifth Floor,
 # Boston, MA 02110-1301 USA.
 
-from .agent_based_api.v1 import check_levels, register, render, Result, Service, startswith, SNMPTree, State, OIDEnd
+from .agent_based_api.v2 import (
+    check_levels,
+    CheckParameters,
+    DiscoveryResult,
+    Result,
+    Service,
+    SNMPTree,
+    State,
+    render,
+    exists,
+    startswith,
+    CheckResult,
+    CheckPlugin,
+    SNMPSection,
+)
 
 def _map_connection_state(state):
     state_map = {
@@ -49,11 +63,11 @@ def parse_lancom_vpn_connection(string_table):
         }
     return section
 
-def discover_lancom_vpn_connection(section):
+def discover_lancom_vpn_connection(section) -> DiscoveryResult:
     for item, data in section.items():
         yield Service(item=item)
 
-def check_lancom_vpn_connection(item, section):
+def check_lancom_vpn_connection(item, section) -> CheckResult:
     if item in section:
         data = section[item]
         yield Result(state=State.OK, summary=data['name'])
@@ -66,7 +80,7 @@ def check_lancom_vpn_connection(item, section):
             label='Uptime',
         )
 
-register.snmp_section(
+SNMPSection(
     name = "lancom_vpn_connection",
     parse_function = parse_lancom_vpn_connection,
     detect=startswith(".1.3.6.1.2.1.1.2.0", ".1.3.6.1.4.1.2356.11.8"),
@@ -82,7 +96,7 @@ register.snmp_section(
     ),
 )
 
-register.check_plugin(
+CheckPlugin(
     name = "lancom_vpn_connection",
     sections = ["lancom_vpn_connection"],
     service_name = "VPN Connection %s",
