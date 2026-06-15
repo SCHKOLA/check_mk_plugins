@@ -1,0 +1,105 @@
+#!/usr/bin/env python3
+
+import argparse
+import json
+import sys
+
+
+def main():
+    parser = argparse.ArgumentParser("agent_reolink")
+    parser.add_argument("--host",     required=True,  help="IP oder Hostname der Kamera")
+    parser.add_argument("--user",     required=True,  help="Benutzername")
+    parser.add_argument("--password", required=True,  help="Passwort")
+    parser.add_argument("--port",     default=80,     type=int, help="HTTP-Port (Standard: 80)")
+    args = parser.parse_args()
+
+    if args.password_id:
+        try:
+            from cmk.utils import password_store
+            password = password_store.extract(args.password_id)
+        except Exception as e:
+            sys.stderr.write(f"FEHLER: Passwort konnte nicht aus dem Password Store geladen werden: {e}\n")
+            sys.exit(1)
+    else:
+        password = args.password
+
+    try:
+        from reolinkapi import Camera
+    except ImportError:
+        sys.stderr.write("FEHLER: reolinkapi nicht installiert.\n")
+        sys.exit(1)
+
+    try:
+        cam = Camera(args.host, args.user, args.password)
+        if cam is None:
+            raise ConnectionError("Camera() lieferte None zurück")
+    except Exception as e:
+        print("<<<reolink_info:sep(0)>>>")
+        print(json.dumps({"error": f"Verbindung fehlgeschlagen: {e}"}))
+        sys.exit(1)
+
+    print("<<<reolink_info:sep(0)>>>")
+    try:
+        dev_raw = cam.get_device_info()
+        if isinstance(dev_raw, list) and dev_raw:
+            value = dev_raw[0].get("value", dev_raw[0])
+        else:
+            value = dev_raw
+        print(json.dumps({"ok": True, "data": value}))
+    except Exception as e:
+        print(json.dumps({"ok": False, "error": str(e)}))
+
+    print("<<<reolink_hdd:sep(0)>>>")
+    try:
+        hdd_raw = cam.get_hdd_info()
+        if isinstance(hdd_raw, list) and hdd_raw:
+            value = hdd_raw[0].get("value", {})
+            hdd_list = value.get("HddInfo", value)
+            if isinstance(hdd_list, dict):
+                hdd_list = [hdd_list]
+        else:
+            hdd_list = []
+        print(json.dumps({"ok": True, "disks": hdd_list}))
+    except Exception as e:
+        print(json.dumps({"ok": False, "error": str(e)}))
+
+    print("<<<reolink_performance:sep(0)>>>")
+    try:
+        perf_raw = cam.get_performance()
+        if isinstance(perf_raw, list) and perf_raw:
+            value = perf_raw[0].get("value", perf_raw[0])
+        else:
+            value = perf_raw
+        print(json.dumps({"ok": True, "data": value}))
+    except Exception as e:
+        print(json.dumps({"ok": False, "error": str(e)}))
+
+    print("<<<reolink_recording:sep(0)>>>")
+    try:
+        rec_raw = cam.get_recording_encoding()
+        if isinstance(rec_raw, list) and rec_raw:
+            value = rec_raw[0].get("value", rec_raw[0])
+        else:
+            value = rec_raw
+        print(json.dumps({"ok": True, "data": value}))
+    except Exception:
+        try:
+            import requests
+            url = f"http://{args.host}:{args.port}/api.cgi"
+            resp = requests.post(
+                url,
+                json=[{"cmd": "GetRecV20", "action": 1, "param": {"channel": 0}}],
+                params={"user": args.user, "password": password},
+                timeout=10,
+                verify=False,
+            )
+            resp.raise_for_status()
+            raw = resp.json()
+            value = raw[0].get("value", {}) if isinstance(raw, list) and raw else {}
+            print(json.dumps({"ok": True, "data": value}))
+        except Exception as e:
+            print(json.dumps({"ok": False, "error": str(e)}))
+
+
+if __name__ == "__main__":
+    main()
