@@ -2,6 +2,7 @@
 
 from collections.abc import Iterator
 from cmk.server_side_calls.v1 import (
+    noop_parser,
     HostConfig,
     Secret,
     SpecialAgentCommand,
@@ -21,5 +22,6 @@ def _agent_arguments(params, host_config):
 
 special_agent_reolink = SpecialAgentConfig(
     name="reolink",
+    parameter_parser=noop_parser,
     commands_function=_agent_arguments,
 )
